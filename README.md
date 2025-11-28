@@ -47,7 +47,3 @@ This baseline is the foundation. Next steps:
 4. Deploy the model using KServe
 5. Scale to full dataset and optimize hyperparameters
 
-## Files
-- `pcam_baseline.py` - Main training script
-- `pcam_baseline_model.pth` - Saved model weights
-- `training_history.png` - Loss and accuracy plots
