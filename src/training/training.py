@@ -38,6 +38,7 @@ class ModelTrainer():
         device: Optional[str] = None,
         lr: float = 0.001,
         minio_config: Optional[Dict[str, Any]] = None,
+        mlflow_tracking_uri: Optional[str] = None,
         mlflow_experiment_name: str = "model_training",
         checkpoint_dir: Optional[Path] = None
     ):
@@ -80,13 +81,16 @@ class ModelTrainer():
         self.model.to(self.device)
 
         # Setup MLflow
+        self.mlflow_tracking_uri = mlflow_tracking_uri
+        mlflow.set_tracking_uri(mlflow_tracking_uri)
         self.mlflow_experiment_name = mlflow_experiment_name
-        mlflow.set_experiment(mlflow_experiment_name)
+        self.experiment_id = self._create_experiment_if_not_exists(mlflow_experiment_name)
+        mlflow.set_experiment(experiment_id=self.experiment_id)
         
         # Setup MinIO
         self.minio_config = minio_config or self._default_minio_config()
-        self.minio_client = self._setup_minio_client()
-        self._ensure_bucket_exists()
+        # self.minio_client = self._setup_minio_client()
+        # self._ensure_bucket_exists()
 
         # Create checkpoint directory if specified
         if self.checkpoint_dir:
@@ -107,7 +111,21 @@ class ModelTrainer():
             logger.addHandler(handler)
         
         return logger
-    
+
+    def _create_experiment_if_not_exists(self, mlflow_experiment_name):
+        """Create MLflow experiment if it doesn't exist"""
+        try:
+            experiment = mlflow.get_experiment_by_name(mlflow_experiment_name)
+            if experiment is None:
+                experiment_id = mlflow.create_experiment(mlflow_experiment_name)
+                self.logger.info(f"Created experiment: {mlflow_experiment_name} with ID: {experiment_id}")
+                return experiment_id
+            else:
+                return experiment.experiment_id
+        except Exception as e:
+            self.logger.error(f"Error managing experiment {mlflow_experiment_name}: {e}")
+            raise
+
     @staticmethod
     def _default_minio_config() -> Dict[str, Any]:
         """Default MinIO configuration."""

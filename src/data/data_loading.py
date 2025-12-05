@@ -89,7 +89,7 @@ class DataDownloader():
             raise RuntimeError("No Dataset loaded, call load_data() first")
         
         dataset_size = len(self.dataset)
-        dataset_labels = [self.dataset[i][1] for i in range(len(dataset_size))]
+        dataset_labels = [self.dataset[i][1] for i in range(dataset_size)]
         label_distribution = dict(Counter(dataset_labels))
 
         return dataset_size, label_distribution
@@ -130,10 +130,20 @@ class DataDownloader():
         axes = axes.ravel() if nrows * ncols > 1 else [axes]
 
         for idx in range(num_samples):
-            image, label = self.train_dataset[idx]
+            image, label = self.dataset[idx]
 
 
-            axes[idx].imshow(np.array(image))
+            # Convert tensor to numpy array if needed
+            if hasattr(image, 'numpy'):
+                image = image.numpy()
+                # Handle channel-first format (C, H, W) -> (H, W, C)
+                if image.shape[0] in [1, 3]:
+                    image = np.transpose(image, (1, 2, 0))
+                # Squeeze single channel
+                if image.shape[-1] == 1:
+                    image = image.squeeze(-1)
+            
+            axes[idx].imshow(image)
             axes[idx].set_title(f"Label: {label}", fontsize=10)
             axes[idx].axis('off')
 
