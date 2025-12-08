@@ -17,6 +17,8 @@ from minio.error import S3Error
 import mlflow
 import mlflow.pytorch
 
+from ..minio.minio_init import MinIO
+
 class ModelTrainer():
     """
     Production-grade trainer for PyTorch models with MLflow tracking and MinIO storage.
@@ -73,7 +75,7 @@ class ModelTrainer():
         # Initialize criterion and optimizer
         self.criterion = criterion or nn.CrossEntropyLoss()
         self.optimizer = optimizer or optim.Adam(
-            self.model.parameters(), 
+            self.model.parameters(),
             lr=self.lr
         )
 
@@ -86,11 +88,10 @@ class ModelTrainer():
         self.mlflow_experiment_name = mlflow_experiment_name
         self.experiment_id = self._create_experiment_if_not_exists(mlflow_experiment_name)
         mlflow.set_experiment(experiment_id=self.experiment_id)
-        
+
         # Setup MinIO
-        self.minio_config = minio_config or self._default_minio_config()
-        # self.minio_client = self._setup_minio_client()
-        # self._ensure_bucket_exists()
+        self.minio_config = minio_config
+        self.minio = MinIO(minio_config)
 
         # Create checkpoint directory if specified
         if self.checkpoint_dir:
@@ -125,17 +126,6 @@ class ModelTrainer():
         except Exception as e:
             self.logger.error(f"Error managing experiment {mlflow_experiment_name}: {e}")
             raise
-
-    @staticmethod
-    def _default_minio_config() -> Dict[str, Any]:
-        """Default MinIO configuration."""
-        return {
-            'endpoint': 'minio:9000',
-            'access_key': 'admin',
-            'secret_key': 'admin123',
-            'secure': False,
-            'bucket_name': 'ml-models'
-        }
     
     def _setup_device(self, device: Optional[str]) -> torch.device:
         """Auto-detect or setup specified device."""
@@ -147,34 +137,6 @@ class ModelTrainer():
             else:
                 return torch.device("cpu")
         return torch.device(device)
-    
-    def _setup_minio_client(self) -> Minio:
-        """Initialize MinIO client with error handling."""
-        try:
-            client = Minio(
-                self.minio_config['endpoint'],
-                access_key=self.minio_config['access_key'],
-                secret_key=self.minio_config['secret_key'],
-                secure=self.minio_config['secure']
-            )
-            self.logger.info("MinIO client initialized successfully")
-            return client
-        except Exception as e:
-            self.logger.error(f"Failed to initialize MinIO client: {str(e)}")
-            raise RuntimeError(f"MinIO initialization failed: {str(e)}") from e
-        
-    def _ensure_bucket_exists(self) -> None:
-        """Ensure MinIO bucket exists, create if not."""
-        bucket_name = self.minio_config['bucket_name']
-        try:
-            if not self.minio_client.bucket_exists(bucket_name):
-                self.minio_client.make_bucket(bucket_name)
-                self.logger.info(f"Created MinIO bucket: {bucket_name}")
-            else:
-                self.logger.info(f"Using existing MinIO bucket: {bucket_name}")
-        except S3Error as e:
-            self.logger.error(f"Failed to setup bucket: {str(e)}")
-            raise
 
     def _train_epoch(self) -> Tuple[float, float]:
         """
@@ -427,7 +389,7 @@ class ModelTrainer():
             model_buffer.seek(0)
             
             # Upload to MinIO
-            self.minio_client.put_object(
+            self.minio.client.put_object(
                 bucket_name=bucket_name,
                 object_name=model_path,
                 data=model_buffer,
@@ -473,7 +435,7 @@ class ModelTrainer():
             metadata_buffer.seek(0)
             
             # Upload to MinIO
-            self.minio_client.put_object(
+            self.minio.client.put_object(
                 bucket_name=bucket_name,
                 object_name=metadata_path,
                 data=metadata_buffer,
@@ -523,7 +485,7 @@ class ModelTrainer():
         
         try:
             # Download model from MinIO
-            response = self.minio_client.get_object(bucket_name, model_path)
+            response = self.minio.client.get_object(bucket_name, model_path)
             model_buffer = BytesIO(response.read())
             model_buffer.seek(0)
             
