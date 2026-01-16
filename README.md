@@ -1,22 +1,39 @@
-# CV Pipeline - Computer Vision Research Toolkit
+# CV Pipeline - Computer Vision Training Toolkit
 
-A practical toolkit for ML researchers and data scientists. Train models, compare architectures, and deploy to production - all in a few lines of code.
+A practical toolkit for ML researchers and data scientists. Analyze datasets, train models, compare architectures, and export for deployment - all in a few lines of code.
 
 ```python
+from cv_pipeline import quick_train, export_model
+
 # Train a classifier in one line
-from cv_pipeline import quick_train
 model, history = quick_train("./my_images", model="resnet50", epochs=10)
+
+# Export for deployment
+export_model(model, "model.onnx", format="onnx")
 ```
 
 ## Why This Toolkit?
 
 **For Researchers**: Focus on experiments, not boilerplate. Quick iteration with pretrained models.
 
-**For Data Scientists**: Production-ready code that scales. YAML configs, MLflow tracking, MinIO storage.
+**For Data Scientists**: Dataset analysis, model comparison, and production-ready exports.
 
 **For Teams**: Standardized workflows across classification, detection, and segmentation tasks.
 
-> **New to this toolkit?** Check out the [Scenarios & Use Cases Guide](docs/SCENARIOS.md) for detailed examples covering dataset analysis, model selection, transfer learning, deployment, and industry-specific solutions.
+> **New to this toolkit?** Check out the [Scenarios & Use Cases Guide](docs/SCENARIOS.md) for detailed examples.
+
+## What This Toolkit Does (and Doesn't Do)
+
+| Included | Not Included |
+|----------|--------------|
+| Dataset analysis & validation | Model serving API |
+| Data loading & augmentation | Docker/Kubernetes deployment |
+| 50+ model architectures (via timm) | Inference server |
+| Training loops with progress tracking | Production monitoring |
+| Model comparison & benchmarking | A/B testing |
+| Export to TorchScript, ONNX, state_dict | Cloud deployment |
+
+**This is a training toolkit.** It outputs deployment-ready model files (`.pt`, `.onnx`) that you deploy with your own infrastructure (FastAPI, TorchServe, Triton, etc.).
 
 ## Quick Start
 
@@ -52,7 +69,6 @@ from cv_pipeline import (
     quick_train,
     compare_models,
     export_model,
-    generate_notebook,
 )
 
 # 1. Understand your data
@@ -67,7 +83,8 @@ model, history = quick_train(
     batch_size=32,
 )
 
-# 3. Export for production
+# 3. Export (TorchScript for PyTorch serving, ONNX for cross-platform)
+export_model(model, "model.pt", format="torchscript")
 export_model(model, "model.onnx", format="onnx")
 ```
 
@@ -77,13 +94,7 @@ export_model(model, "model.onnx", format="onnx")
 cv-pipeline notebook --task classification --output my_experiment.ipynb
 ```
 
-Or in Python:
-```python
-from cv_pipeline import generate_notebook
-generate_notebook("classification", "my_experiment.ipynb", data_path="./my_images")
-```
-
-## Features at a Glance
+## Features
 
 | Feature | CLI Command | Python Function |
 |---------|-------------|-----------------|
@@ -93,23 +104,24 @@ generate_notebook("classification", "my_experiment.ipynb", data_path="./my_image
 | Model export | `cv-pipeline export` | `export_model()` |
 | Notebook generation | `cv-pipeline notebook` | `generate_notebook()` |
 
-## Supported Tasks & Architectures
+## Supported Architectures
+
+All architectures available via [timm](https://github.com/huggingface/pytorch-image-models):
 
 ### Classification
 - **ResNet**: resnet18, resnet34, resnet50, resnet101
 - **EfficientNet**: efficientnet_b0 through efficientnet_b4
 - **Vision Transformer**: vit_tiny, vit_small, vit_base
-- **MobileNet**: mobilenet_v2, mobilenet_v3_small, mobilenet_v3_large
+- **MobileNet**: mobilenetv2_100, mobilenetv3_small, mobilenetv3_large
 - **ConvNeXt**: convnext_tiny, convnext_small, convnext_base
 
-### Detection (via ultralytics)
+### Detection (templates)
 - YOLOv8: yolov8n, yolov8s, yolov8m, yolov8l
 - Faster R-CNN: fasterrcnn_resnet50_fpn
 
-### Segmentation (via segmentation-models-pytorch)
+### Segmentation (templates)
 - UNet, UNet++
 - DeepLabV3, DeepLabV3+
-- FPN, PSPNet
 
 ## Examples
 
@@ -119,11 +131,11 @@ generate_notebook("classification", "my_experiment.ipynb", data_path="./my_image
 from cv_pipeline import load_image_folder, compare_models
 
 # Load your test set
-_, test_loader, classes = load_image_folder("./test_images")
+_, test_loader, classes = load_image_folder("./test_images", split=0.0)
 
 # Compare multiple architectures
 results = compare_models(
-    models=["resnet50", "efficientnet_b0", "mobilenet_v2"],
+    models=["resnet50", "efficientnet_b0", "mobilenetv2_100"],
     test_loader=test_loader,
     num_classes=len(classes),
 )
@@ -135,7 +147,7 @@ for model, metrics in results.items():
 ### Transfer Learning
 
 ```python
-from cv_pipeline import get_model, load_image_folder
+from cv_pipeline import get_model
 import torch
 
 # Load pretrained model
@@ -150,23 +162,37 @@ for param in model.fc.parameters():
 # Your training loop here...
 ```
 
-### Export to ONNX
+### Full Workflow
 
 ```python
-from cv_pipeline import export_model, get_model
+from cv_pipeline import analyze_dataset, quick_train, export_model, plot_results
 
-model = get_model("efficientnet_b0", num_classes=10)
-# ... train your model ...
+# 1. Analyze
+stats = analyze_dataset("./my_images")
+if stats.get("imbalance_ratio", 1) > 5:
+    print("Warning: Class imbalance detected")
 
-export_model(model, "model.onnx", format="onnx", input_size=(224, 224))
-# Now deploy with ONNX Runtime, TensorRT, or OpenVINO
+# 2. Train
+model, history = quick_train(
+    "./my_images",
+    model="efficientnet_b0",
+    epochs=20,
+    save_path="best_model.pth"
+)
+
+# 3. Visualize
+plot_results(history, save_path="training_curves.png")
+
+# 4. Export
+export_model(model, "model.onnx", format="onnx")
 ```
 
 ## Project Structure
 
 ```
 ml-pipeline-cv/
-├── cv_pipeline/                    # Researcher toolkit (NEW)
+├── cv_pipeline/                    # Main toolkit
+│   ├── __init__.py                 # Public API exports
 │   ├── cli.py                      # Command-line interface
 │   ├── utils.py                    # Core utilities
 │   └── notebook_generator.py       # Jupyter notebook templates
@@ -174,152 +200,54 @@ ml-pipeline-cv/
 │   ├── config/                     # Pydantic configuration
 │   ├── core/                       # Base classes & factories
 │   ├── models/                     # Model implementations
-│   │   ├── classification.py       # timm-based classifiers
-│   │   ├── detection.py            # YOLO, Faster R-CNN
-│   │   └── segmentation.py         # UNet, DeepLab
 │   ├── training/                   # Training loops
 │   ├── evaluation/                 # Metrics & visualization
-│   ├── data/                       # Data loading
-│   └── airflow/                    # Production DAGs
+│   └── data/                       # Data loading
+├── tests/                          # Test suite
+├── scripts/
+│   └── test_scenarios.py           # Lightweight validation script
+├── docs/
+│   └── SCENARIOS.md                # Use cases guide
 ├── examples/                       # Ready-to-run examples
-│   ├── quickstart.py
-│   ├── model_comparison.py
-│   ├── transfer_learning.py
-│   └── deploy_model.py
-├── templates/                      # Business use case templates
-│   ├── medical_imaging/
-│   ├── manufacturing_qc/
-│   ├── retail/
-│   └── document_processing/
 └── configs/                        # YAML configurations
 ```
 
-## Advanced: Production Pipeline
+## Export Formats
 
-For production deployments, the framework includes:
+| Format | Use Case | Command |
+|--------|----------|---------|
+| `torchscript` | PyTorch serving, TorchServe | `export_model(model, "model.pt", format="torchscript")` |
+| `onnx` | Cross-platform (ONNX Runtime, TensorRT, OpenVINO) | `export_model(model, "model.onnx", format="onnx")` |
+| `state_dict` | Resume training, fine-tuning | `export_model(model, "weights.pth", format="state_dict")` |
 
-- **MLflow Integration**: Experiment tracking & model registry
-- **MinIO Storage**: S3-compatible artifact storage
-- **Airflow DAGs**: Automated training pipelines
-- **YAML Configs**: Reproducible experiments
+## After Export: Deployment Options
 
-### Using Config Files
+The toolkit exports models. For deployment, use:
 
-```yaml
-# configs/my_experiment.yaml
-data:
-  dataset_name: custom
-  data_root: ./data/my_images
-  image_size: [224, 224]
+- **[TorchServe](https://pytorch.org/serve/)** - PyTorch's official serving solution
+- **[ONNX Runtime](https://onnxruntime.ai/)** - Cross-platform inference
+- **[Triton Inference Server](https://developer.nvidia.com/nvidia-triton-inference-server)** - High-performance GPU serving
+- **[FastAPI](https://fastapi.tiangolo.com/)** + custom code - Lightweight REST API
+- **[BentoML](https://www.bentoml.com/)** - ML model packaging and deployment
 
-model:
-  task_type: classification
-  architecture: efficientnet_b0
-  num_classes: 10
-  pretrained: true
-
-training:
-  batch_size: 32
-  num_epochs: 50
-  learning_rate: 0.001
-```
-
-```python
-from src.config import load_config
-from src.core import ModelFactory, TrainerFactory
-
-config = load_config("configs/my_experiment.yaml")
-model = ModelFactory.create(**config.model.model_dump())
-trainer = TrainerFactory.create(model=model, config=config.training, ...)
-```
-
-### Business Templates
-
-Pre-configured templates for common use cases:
-
-| Template | Use Case | Dataset Examples |
-|----------|----------|------------------|
-| `medical_imaging/` | Cancer detection, X-ray classification | PCAM, ChestX-ray14 |
-| `manufacturing_qc/` | Defect detection, quality control | MVTec AD |
-| `retail/` | Product classification, visual search | Products-10K |
-| `document_processing/` | Document classification, form detection | RVL-CDIP |
+## Testing
 
 ```bash
-# Train using a template
-python templates/medical_imaging/train.py --dataset pcam --epochs 30
-```
+# Run full test suite
+pytest tests/ -v
 
-## Infrastructure Setup (Optional)
-
-For full MLOps capabilities:
-
-```bash
-# MinIO (object storage)
-docker run -d -p 9000:9000 -p 9001:9001 \
-  -e "MINIO_ROOT_USER=admin" \
-  -e "MINIO_ROOT_PASSWORD=admin123" \
-  minio/minio server /data --console-address ":9001"
-
-# MLflow (experiment tracking)
-mlflow server --host 0.0.0.0 --port 5000
-
-# Airflow (orchestration) - see docs for full setup
+# Run lightweight scenario validation
+python scripts/test_scenarios.py
 ```
 
 ## Requirements
 
-Core:
 - Python 3.8+
 - PyTorch 2.0+
 - torchvision 0.15+
 
-Install options:
 ```bash
-pip install -e .                    # Core (classification)
-pip install -e ".[detection]"       # + YOLOv8
-pip install -e ".[segmentation]"    # + UNet, DeepLab
-pip install -e ".[full]"            # Everything
-```
-
-## Common Workflows
-
-### 1. New Dataset Evaluation
-
-```bash
-# Analyze first
-cv-pipeline analyze --data ./new_dataset --save report.json
-
-# Quick baseline
-cv-pipeline train --data ./new_dataset --model resnet50 --epochs 5
-
-# Compare architectures
-cv-pipeline compare --models resnet50,efficientnet_b0,mobilenet_v2 --data ./test
-```
-
-### 2. Model Selection
-
-```python
-# Find the best accuracy/size trade-off
-results = compare_models(
-    ["mobilenet_v2", "efficientnet_b0", "resnet50"],
-    test_loader, num_classes=10
-)
-
-# Pick based on your deployment constraints
-# - Mobile: mobilenet_v2 (3.4M params)
-# - Server: efficientnet_b0 (5.3M params)
-# - Best accuracy: resnet50 (25.6M params)
-```
-
-### 3. Production Deployment
-
-```python
-# Train
-model, _ = quick_train("./data", model="efficientnet_b0", epochs=20)
-
-# Export
-export_model(model, "model.pt", format="torchscript")  # PyTorch serving
-export_model(model, "model.onnx", format="onnx")       # Cross-platform
+pip install -e .
 ```
 
 ## Documentation
@@ -328,14 +256,12 @@ export_model(model, "model.onnx", format="onnx")       # Cross-platform
 |----------|-------------|
 | [Scenarios Guide](docs/SCENARIOS.md) | Comprehensive use cases for data scientists |
 | [examples/](examples/) | Ready-to-run Python scripts |
-| [templates/](templates/) | Industry-specific solutions |
 | [configs/](configs/) | YAML configuration examples |
 
 ## Contributing
 
-Contributions welcome! Areas of interest:
+Contributions welcome:
 - New model architectures
-- Additional business templates
 - Documentation improvements
 - Bug fixes
 
@@ -348,7 +274,4 @@ MIT License
 Built with:
 - [PyTorch](https://pytorch.org/) & [torchvision](https://pytorch.org/vision/)
 - [timm](https://github.com/huggingface/pytorch-image-models) - PyTorch Image Models
-- [ultralytics](https://github.com/ultralytics/ultralytics) - YOLOv8
-- [segmentation-models-pytorch](https://github.com/qubvel/segmentation_models.pytorch)
-- [MLflow](https://mlflow.org/) - Experiment tracking
-- [MinIO](https://min.io/) - Object storage
+- [MLflow](https://mlflow.org/) - Experiment tracking (optional)
