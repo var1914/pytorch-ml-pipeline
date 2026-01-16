@@ -1,0 +1,16 @@
+# Detection task configuration
+_base_: ../base.yaml
+
+model:
+  task_type: detection
+  architecture: yolov8s
+
+data:
+  image_size: [640, 640]
+  augmentation_level: heavy
+
+# Detection-specific defaults
+training:
+  batch_size: 16
+  learning_rate: 0.01
+  num_epochs: 100

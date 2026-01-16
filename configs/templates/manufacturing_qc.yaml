@@ -1,0 +1,38 @@
+# Manufacturing Quality Control Template Configuration
+# Use cases: Defect detection, Surface inspection, Assembly verification
+_base_: ../base.yaml
+
+name: manufacturing_qc_pipeline
+description: "Defect detection and quality inspection for manufacturing"
+
+data:
+  dataset_name: mvtec  # Options: mvtec, custom
+  data_root: ./data/manufacturing
+  image_size: [256, 256]
+  augmentation_level: heavy  # More augmentation for limited data
+  # MVTec often has different image characteristics
+  normalization_mean: [0.485, 0.456, 0.406]
+  normalization_std: [0.229, 0.224, 0.225]
+
+model:
+  task_type: detection  # or segmentation for pixel-level defects
+  architecture: yolov8s  # Fast and accurate for defect detection
+  num_classes: 5  # Defect types: scratch, dent, contamination, etc.
+  pretrained: true
+  freeze_backbone: false
+
+training:
+  batch_size: 16
+  num_epochs: 100
+  learning_rate: 0.01
+  weight_decay: 0.0005
+  optimizer: sgd
+  scheduler: cosine
+  early_stopping_patience: 15
+  mixed_precision: true
+  gradient_clip: 10.0  # Gradient clipping for stability
+
+infra:
+  mlflow_experiment_name: manufacturing_qc_experiments
+  minio_bucket: manufacturing-models
+  save_every_n_epochs: 10

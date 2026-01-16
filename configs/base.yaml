@@ -1,0 +1,50 @@
+# Base configuration for CV Pipeline
+# All templates inherit from this file
+
+name: cv_pipeline
+version: "1.0.0"
+
+# Data configuration
+data:
+  dataset_name: custom
+  data_root: ./data
+  image_size: [224, 224]
+  normalization_mean: [0.485, 0.456, 0.406]  # ImageNet defaults
+  normalization_std: [0.229, 0.224, 0.225]
+  augmentation_level: medium
+  num_workers: 4
+  pin_memory: true
+
+# Model configuration
+model:
+  task_type: classification
+  architecture: resnet50
+  num_classes: 2
+  pretrained: true
+  freeze_backbone: false
+  dropout: 0.0
+
+# Training configuration
+training:
+  batch_size: 32
+  num_epochs: 50
+  learning_rate: 0.001
+  weight_decay: 0.0001
+  optimizer: adam
+  scheduler: null
+  early_stopping_patience: 5
+  device: auto
+  mixed_precision: false
+  gradient_clip: null
+
+# Infrastructure configuration
+infra:
+  minio_endpoint: ${MINIO_ENDPOINT:-localhost:9000}
+  minio_access_key: ${MINIO_ACCESS_KEY:-admin}
+  minio_secret_key: ${MINIO_SECRET_KEY:-admin123}
+  minio_bucket: ml-models
+  minio_secure: false
+  mlflow_tracking_uri: ${MLFLOW_TRACKING_URI:-http://localhost:5000}
+  mlflow_experiment_name: null
+  checkpoint_dir: ./checkpoints
+  save_every_n_epochs: 5

@@ -1,9 +1,43 @@
-torch==2.8.0
-apache-airflow==3.1.2
-pandas==2.3.3
-torchvision==0.23.0
-h5py==3.15.1
-gdown==5.2.0
-matplotlib==3.10.7
-mlflow==3.5.1
-minio==7.2.20
+# Core Deep Learning
+torch>=2.0.0
+torchvision>=0.15.0
+
+# Model Architectures
+timm>=0.9.0                         # Classification models (ResNet, EfficientNet, ViT)
+ultralytics>=8.0.0                  # YOLOv8 for detection
+segmentation-models-pytorch>=0.3.0  # Segmentation models (UNet, DeepLab)
+
+# Data & Preprocessing
+albumentations>=1.3.0               # Advanced augmentation
+opencv-python>=4.8.0                # Image processing
+Pillow>=9.0.0                       # Image loading
+
+# Evaluation
+pycocotools>=2.0.0                  # COCO metrics for detection
+scikit-learn>=1.0.0                 # Classification metrics
+
+# Configuration
+pydantic>=2.0.0                     # Settings management
+pydantic-settings>=2.0.0            # Environment config
+omegaconf>=2.3.0                    # YAML config loading
+
+# MLOps
+mlflow>=2.0.0                       # Experiment tracking
+minio>=7.0.0                        # Object storage
+
+# Orchestration
+apache-airflow>=2.5.0               # Workflow orchestration
+
+# Data Processing
+pandas>=2.0.0                       # Data manipulation
+numpy>=1.24.0                       # Numerical computing
+h5py>=3.8.0                         # HDF5 file support
+pyarrow>=12.0.0                     # Parquet support
+
+# Visualization
+matplotlib>=3.7.0                   # Plotting
+seaborn>=0.12.0                     # Statistical visualization
+
+# Utilities
+tqdm>=4.65.0                        # Progress bars
+gdown>=4.7.0                        # Google Drive download

@@ -1,561 +1,343 @@
-# PyTorch ML Pipeline Framework
+# CV Pipeline - Computer Vision Research Toolkit
 
-A production-ready ML pipeline framework for training PyTorch models on any image classification dataset. Built with Apache Airflow for orchestration, MLflow for experiment tracking, and MinIO for object storage.
+A practical toolkit for ML researchers and data scientists. Train models, compare architectures, and deploy to production - all in a few lines of code.
 
-## What is this?
-
-This is a complete, working ML pipeline that you can use to train models on any PyTorch-compatible image dataset. Whether you're working with CIFAR-10, ImageNet, medical images, or your own custom dataset, this framework handles the entire workflow from data loading to model deployment.
-
-The pipeline is designed to be modular and easy to customize. You can swap datasets, models, optimizers, and configurations without changing the core pipeline logic.
-
-## Key Features
-
-- **Dataset Agnostic**: Works with any `torchvision.datasets` or custom PyTorch `Dataset`
-- **Modular Design**: Easily swap models, optimizers, loss functions
-- **Experiment Tracking**: Built-in MLflow integration for tracking experiments
-- **Cloud Storage**: MinIO S3-compatible storage for datasets and models
-- **Pipeline Orchestration**: Apache Airflow DAGs for production workflows
-- **Comprehensive Evaluation**: Automatic metrics, visualizations, and reports
-- **Production Ready**: Model versioning, registry, and deployment tools
-
-## How It Works
-
-The pipeline has four main stages:
-
-```
-Data Preparation → Model Training → Model Evaluation → Model Deployment
+```python
+# Train a classifier in one line
+from cv_pipeline import quick_train
+model, history = quick_train("./my_images", model="resnet50", epochs=10)
 ```
 
-Each stage is independent and communicates through MinIO storage and XCom. Data never gets passed directly between tasks, only file paths.
+## Why This Toolkit?
 
-## Supported Datasets
+**For Researchers**: Focus on experiments, not boilerplate. Quick iteration with pretrained models.
 
-This framework works with any dataset from `torchvision.datasets` including:
-- CIFAR-10, CIFAR-100
-- ImageNet
-- MNIST, Fashion-MNIST
-- SVHN
-- PCAM (PatchCamelyon)
-- STL10
-- Places365
-- And many more...
+**For Data Scientists**: Production-ready code that scales. YAML configs, MLflow tracking, MinIO storage.
 
-You can also easily add your own custom datasets by implementing PyTorch's `Dataset` interface.
+**For Teams**: Standardized workflows across classification, detection, and segmentation tasks.
+
+> **New to this toolkit?** Check out the [Scenarios & Use Cases Guide](docs/SCENARIOS.md) for detailed examples covering dataset analysis, model selection, transfer learning, deployment, and industry-specific solutions.
+
+## Quick Start
+
+### Installation
+
+```bash
+git clone https://github.com/your-repo/ml-pipeline-cv.git
+cd ml-pipeline-cv
+pip install -e .
+```
+
+### Option 1: CLI (Fastest)
+
+```bash
+# Analyze your dataset
+cv-pipeline analyze --data ./my_images
+
+# Train a model
+cv-pipeline train --data ./my_images --model resnet50 --epochs 10
+
+# Compare architectures
+cv-pipeline compare --models resnet50,efficientnet_b0 --data ./test_images
+
+# Export for deployment
+cv-pipeline export --model trained.pth --format onnx
+```
+
+### Option 2: Python API
+
+```python
+from cv_pipeline import (
+    analyze_dataset,
+    quick_train,
+    compare_models,
+    export_model,
+    generate_notebook,
+)
+
+# 1. Understand your data
+stats = analyze_dataset("./my_images")
+print(f"Found {stats['num_classes']} classes, {stats['total_images']} images")
+
+# 2. Train a model
+model, history = quick_train(
+    "./my_images",
+    model="efficientnet_b0",
+    epochs=10,
+    batch_size=32,
+)
+
+# 3. Export for production
+export_model(model, "model.onnx", format="onnx")
+```
+
+### Option 3: Generate Notebook
+
+```bash
+cv-pipeline notebook --task classification --output my_experiment.ipynb
+```
+
+Or in Python:
+```python
+from cv_pipeline import generate_notebook
+generate_notebook("classification", "my_experiment.ipynb", data_path="./my_images")
+```
+
+## Features at a Glance
+
+| Feature | CLI Command | Python Function |
+|---------|-------------|-----------------|
+| Dataset analysis | `cv-pipeline analyze` | `analyze_dataset()` |
+| Quick training | `cv-pipeline train` | `quick_train()` |
+| Model comparison | `cv-pipeline compare` | `compare_models()` |
+| Model export | `cv-pipeline export` | `export_model()` |
+| Notebook generation | `cv-pipeline notebook` | `generate_notebook()` |
+
+## Supported Tasks & Architectures
+
+### Classification
+- **ResNet**: resnet18, resnet34, resnet50, resnet101
+- **EfficientNet**: efficientnet_b0 through efficientnet_b4
+- **Vision Transformer**: vit_tiny, vit_small, vit_base
+- **MobileNet**: mobilenet_v2, mobilenet_v3_small, mobilenet_v3_large
+- **ConvNeXt**: convnext_tiny, convnext_small, convnext_base
+
+### Detection (via ultralytics)
+- YOLOv8: yolov8n, yolov8s, yolov8m, yolov8l
+- Faster R-CNN: fasterrcnn_resnet50_fpn
+
+### Segmentation (via segmentation-models-pytorch)
+- UNet, UNet++
+- DeepLabV3, DeepLabV3+
+- FPN, PSPNet
+
+## Examples
+
+### Compare Models on Your Data
+
+```python
+from cv_pipeline import load_image_folder, compare_models
+
+# Load your test set
+_, test_loader, classes = load_image_folder("./test_images")
+
+# Compare multiple architectures
+results = compare_models(
+    models=["resnet50", "efficientnet_b0", "mobilenet_v2"],
+    test_loader=test_loader,
+    num_classes=len(classes),
+)
+
+for model, metrics in results.items():
+    print(f"{model}: {metrics['accuracy']*100:.1f}% ({metrics['params']/1e6:.1f}M params)")
+```
+
+### Transfer Learning
+
+```python
+from cv_pipeline import get_model, load_image_folder
+import torch
+
+# Load pretrained model
+model = get_model("resnet50", num_classes=10, pretrained=True)
+
+# Freeze backbone, train head only
+for param in model.parameters():
+    param.requires_grad = False
+for param in model.fc.parameters():
+    param.requires_grad = True
+
+# Your training loop here...
+```
+
+### Export to ONNX
+
+```python
+from cv_pipeline import export_model, get_model
+
+model = get_model("efficientnet_b0", num_classes=10)
+# ... train your model ...
+
+export_model(model, "model.onnx", format="onnx", input_size=(224, 224))
+# Now deploy with ONNX Runtime, TensorRT, or OpenVINO
+```
 
 ## Project Structure
 
 ```
-pytorch-ml-pipeline/
+ml-pipeline-cv/
+├── cv_pipeline/                    # Researcher toolkit (NEW)
+│   ├── cli.py                      # Command-line interface
+│   ├── utils.py                    # Core utilities
+│   └── notebook_generator.py       # Jupyter notebook templates
 ├── src/
-│   ├── data/
-│   │   ├── data_loading.py          # Dataset loading and parquet conversion
-│   │   └── preprocessing.py         # Data validation and augmentation
-│   ├── models/
-│   │   └── model.py                 # Model architecture wrapper
-│   ├── training/
-│   │   └── training.py              # Training loop with MLflow and MinIO
-│   ├── evaluation/
-│   │   └── evaluation.py            # Metrics, confusion matrix, ROC curves
-│   ├── deployment/
-│   │   └── deployment.py            # Model deployment and versioning
-│   ├── minio/
-│   │   └── minio_init.py            # MinIO client setup
-│   └── airflow/
-│       └── dags.py                  # Airflow DAG definition
-├── data/                            # Downloaded datasets go here
-├── checkpoints/                     # Model checkpoints
-├── requirements.txt
-└── README.md
+│   ├── config/                     # Pydantic configuration
+│   ├── core/                       # Base classes & factories
+│   ├── models/                     # Model implementations
+│   │   ├── classification.py       # timm-based classifiers
+│   │   ├── detection.py            # YOLO, Faster R-CNN
+│   │   └── segmentation.py         # UNet, DeepLab
+│   ├── training/                   # Training loops
+│   ├── evaluation/                 # Metrics & visualization
+│   ├── data/                       # Data loading
+│   └── airflow/                    # Production DAGs
+├── examples/                       # Ready-to-run examples
+│   ├── quickstart.py
+│   ├── model_comparison.py
+│   ├── transfer_learning.py
+│   └── deploy_model.py
+├── templates/                      # Business use case templates
+│   ├── medical_imaging/
+│   ├── manufacturing_qc/
+│   ├── retail/
+│   └── document_processing/
+└── configs/                        # YAML configurations
 ```
 
-## Installation
+## Advanced: Production Pipeline
 
-### Requirements
-- Python 3.8 or higher
-- Docker (for running MinIO, MLflow, and Airflow)
+For production deployments, the framework includes:
 
-### Install Python Dependencies
-```bash
-pip install -r requirements.txt
+- **MLflow Integration**: Experiment tracking & model registry
+- **MinIO Storage**: S3-compatible artifact storage
+- **Airflow DAGs**: Automated training pipelines
+- **YAML Configs**: Reproducible experiments
+
+### Using Config Files
+
+```yaml
+# configs/my_experiment.yaml
+data:
+  dataset_name: custom
+  data_root: ./data/my_images
+  image_size: [224, 224]
+
+model:
+  task_type: classification
+  architecture: efficientnet_b0
+  num_classes: 10
+  pretrained: true
+
+training:
+  batch_size: 32
+  num_epochs: 50
+  learning_rate: 0.001
 ```
-
-The requirements.txt includes:
-```
-torch==2.8.0
-torchvision==0.23.0
-apache-airflow==3.1.2
-pandas==2.3.3
-h5py==3.15.1
-matplotlib==3.10.7
-mlflow==3.5.1
-minio==7.2.20
-scikit-learn
-seaborn
-```
-
-## Quick Start
-
-### Example 1: Train on CIFAR-10
-
-Here's a simple example to train a ResNet18 model on CIFAR-10:
 
 ```python
-from torch.utils.data import DataLoader
-from torchvision import transforms, datasets, models
+from src.config import load_config
+from src.core import ModelFactory, TrainerFactory
 
-from src.data.data_loading import DataDownloader
-from src.training.training import ModelTrainer
-
-# Define data transformations
-transform = transforms.Compose([
-    transforms.ToTensor(),
-    transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
-])
-
-# Load CIFAR-10 dataset
-downloader = DataDownloader()
-train_dataset = downloader.load_data(
-    datasets.CIFAR10, './data', split='train', download=True, transform=transform
-)
-val_dataset = downloader.load_data(
-    datasets.CIFAR10, './data', split='test', download=True, transform=transform
-)
-
-# Create data loaders
-train_loader = DataLoader(train_dataset, batch_size=64, shuffle=True)
-val_loader = DataLoader(val_dataset, batch_size=64, shuffle=False)
-
-# Create model
-model = models.resnet18(num_classes=10)
-
-# Configure MinIO and MLflow
-minio_config = {
-    'endpoint': 'localhost:9000',
-    'access_key': 'admin',
-    'secret_key': 'admin123',
-    'secure': False,
-    'bucket_name': 'ml-models'
-}
-
-# Train the model
-trainer = ModelTrainer(
-    model=model,
-    train_loader=train_loader,
-    val_loader=val_loader,
-    minio_config=minio_config,
-    mlflow_tracking_uri='http://localhost:5000',
-    mlflow_experiment_name='cifar10_resnet18',
-    lr=0.001
-)
-
-history = trainer.train(num_epochs=10, early_stopping_patience=3)
-print(f"Best validation accuracy: {max(history['val_acc']):.4f}")
+config = load_config("configs/my_experiment.yaml")
+model = ModelFactory.create(**config.model.model_dump())
+trainer = TrainerFactory.create(model=model, config=config.training, ...)
 ```
 
-### Example 2: Using Custom Datasets
+### Business Templates
 
-You can use your own dataset by implementing PyTorch's Dataset class:
+Pre-configured templates for common use cases:
 
-```python
-from torch.utils.data import Dataset
-from PIL import Image
-import os
-
-class MyCustomDataset(Dataset):
-    def __init__(self, root_dir, transform=None):
-        self.root_dir = root_dir
-        self.transform = transform
-        self.image_files = [f for f in os.listdir(root_dir) if f.endswith('.jpg')]
-
-    def __len__(self):
-        return len(self.image_files)
-
-    def __getitem__(self, idx):
-        img_path = os.path.join(self.root_dir, self.image_files[idx])
-        image = Image.open(img_path).convert('RGB')
-        label = int(self.image_files[idx].split('_')[0])  # Your label logic
-
-        if self.transform:
-            image = self.transform(image)
-
-        return image, label
-
-# Use it with the pipeline
-custom_dataset = MyCustomDataset('./my_images', transform=transform)
-train_loader = DataLoader(custom_dataset, batch_size=32, shuffle=True)
-
-# Training works the same way
-trainer = ModelTrainer(model, train_loader, val_loader, ...)
-history = trainer.train(num_epochs=20)
-```
-
-## Infrastructure Setup
-
-You need to run three services before using the pipeline:
-
-### 1. MinIO (Object Storage)
-
-MinIO stores your datasets (as parquet files) and trained models.
+| Template | Use Case | Dataset Examples |
+|----------|----------|------------------|
+| `medical_imaging/` | Cancer detection, X-ray classification | PCAM, ChestX-ray14 |
+| `manufacturing_qc/` | Defect detection, quality control | MVTec AD |
+| `retail/` | Product classification, visual search | Products-10K |
+| `document_processing/` | Document classification, form detection | RVL-CDIP |
 
 ```bash
-docker run -d \
-  -p 9000:9000 \
-  -p 9001:9001 \
-  --name minio \
+# Train using a template
+python templates/medical_imaging/train.py --dataset pcam --epochs 30
+```
+
+## Infrastructure Setup (Optional)
+
+For full MLOps capabilities:
+
+```bash
+# MinIO (object storage)
+docker run -d -p 9000:9000 -p 9001:9001 \
   -e "MINIO_ROOT_USER=admin" \
   -e "MINIO_ROOT_PASSWORD=admin123" \
   minio/minio server /data --console-address ":9001"
-```
 
-Access the MinIO console at http://localhost:9001 with username `admin` and password `admin123`.
-
-### 2. MLflow (Experiment Tracking)
-
-MLflow tracks your experiments, metrics, and model artifacts.
-
-```bash
-mlflow server \
-  --backend-store-uri sqlite:///mlflow.db \
-  --default-artifact-root ./mlflow-artifacts \
-  --host 0.0.0.0 \
-  --port 5000
-```
-
-Access the MLflow UI at http://localhost:5000
-
-### 3. Apache Airflow (Optional, for pipeline orchestration)
-
-Airflow orchestrates the entire pipeline workflow.
-
-```bash
-export AIRFLOW_HOME=$(pwd)
-airflow db init
-airflow users create \
-  --username admin \
-  --password admin \
-  --role Admin \
-  --email admin@example.com
-
-airflow webserver -p 8080 &
-airflow scheduler &
-```
-
-Access the Airflow UI at http://localhost:8080 with username `admin` and password `admin`.
-
-## Main Components
-
-### Data Loading
-
-The `DataDownloader` class handles dataset loading and conversion to parquet format:
-
-```python
-from src.data.data_loading import DataDownloader
-
-downloader = DataDownloader()
-
-# Load any torchvision dataset
-dataset = downloader.load_data(
-    dataset_class=datasets.MNIST,
-    root_path='./data',
-    split='train',
-    download=True,
-    transform=your_transform
-)
-
-# Get dataset statistics
-size, distribution = downloader.get_data_stats()
-
-# Convert batches to parquet and upload to MinIO
-downloader.convert_to_parquet_batches(dataloader, output_dir, bucket_name='dataset')
-```
-
-### Data Preprocessing
-
-The `DataPreprocessor` validates your data and provides augmentation options:
-
-```python
-from src.data.preprocessing import DataPreprocessor
-
-preprocessor = DataPreprocessor()
-
-# Validate dataset quality
-validation = preprocessor.validate_dataset(dataset)
-
-# Check if classes are balanced
-balance = preprocessor.check_class_balance(dataset)
-
-# Get augmentation transforms
-transform = preprocessor.get_data_augmentation_transforms(
-    image_size=224,
-    augmentation_level='medium'  # Options: 'light', 'medium', 'heavy'
-)
-
-# Create weighted sampler for imbalanced datasets
-sampler = preprocessor.create_weighted_sampler(dataset)
-```
-
-### Model Training
-
-The `ModelTrainer` handles the training loop with automatic logging to MLflow and saving to MinIO:
-
-```python
-from src.training.training import ModelTrainer
-
-trainer = ModelTrainer(
-    model=your_model,
-    train_loader=train_loader,
-    val_loader=val_loader,
-    minio_config=minio_config,
-    mlflow_tracking_uri='http://localhost:5000',
-    mlflow_experiment_name='my_experiment',
-    lr=0.001,
-    checkpoint_dir='./checkpoints'
-)
-
-history = trainer.train(
-    num_epochs=20,
-    early_stopping_patience=5,
-    save_best_only=True,
-    log_to_mlflow=True
-)
-```
-
-### Model Evaluation
-
-The `ModelEvaluator` generates comprehensive metrics and visualizations:
-
-```python
-from src.evaluation.evaluation import ModelEvaluator
-
-evaluator = ModelEvaluator(
-    model=trained_model,
-    minio_config=minio_config,
-    mlflow_tracking_uri='http://localhost:5000'
-)
-
-# Evaluate and log everything to MLflow
-metrics = evaluator.evaluate(
-    test_loader=test_loader,
-    log_to_mlflow=True,
-    save_visualizations=True
-)
-
-# Get detailed classification report
-report = evaluator.get_classification_report(test_loader)
-
-# Get confusion matrix
-confusion_matrix = evaluator.get_confusion_matrix(test_loader)
-```
-
-### Model Deployment
-
-The `ModelDeployer` handles model versioning and deployment:
-
-```python
-from src.deployment.deployment import ModelDeployer
-
-deployer = ModelDeployer(
-    minio_config=minio_config,
-    mlflow_tracking_uri='http://localhost:5000'
-)
-
-# Deploy a new model version
-deployment_info = deployer.deploy_model(
-    model=model,
-    model_name='my_classifier',
-    version='v1.0.0',
-    metadata={'accuracy': 0.95, 'dataset': 'CIFAR10'},
-    register_to_mlflow=True
-)
-
-# Load a deployed model
-loaded_model = deployer.load_model_from_minio(
-    model_name='my_classifier',
-    version='v1.0.0'
-)
-```
-
-## Using the Airflow Pipeline
-
-The Airflow DAG orchestrates the entire workflow automatically. To configure it for your dataset:
-
-1. Edit `src/airflow/dags.py` configuration (around line 34):
-
-```python
-# Change these for your dataset
-DATASET = datasets.CIFAR10  # Your dataset class
-NUM_CLASSES = 10            # Number of output classes
-IMAGE_SIZE = 32             # Image size
-DATA_ROOT = '../data'       # Where to store data
-```
-
-2. Copy the DAG file to Airflow:
-```bash
-cp src/airflow/dags.py $AIRFLOW_HOME/dags/
-```
-
-3. Open Airflow UI at http://localhost:8080
-
-4. Find the `pcam_ml_pipeline` DAG and toggle it ON
-
-5. Click "Trigger DAG" to start the pipeline
-
-The pipeline runs these four tasks in sequence:
-1. **data_preparation**: Downloads dataset, validates quality, converts to parquet, uploads to MinIO
-2. **model_training**: Trains the model, logs metrics to MLflow, saves checkpoints
-3. **model_evaluation**: Generates evaluation metrics, confusion matrix, ROC curves
-4. **model_deployment**: Deploys model to MinIO production storage and registers in MLflow
-
-## Monitoring
-
-### MLflow Dashboard
-
-Open http://localhost:5000 to view:
-- All experiment runs
-- Training metrics (loss, accuracy)
-- Model parameters and hyperparameters
-- Saved model artifacts
-
-You can compare different runs side by side and see which configurations work best.
-
-### MinIO Console
-
-Open http://localhost:9001 (login: admin/admin123) to view:
-- Stored datasets in parquet format
-- Trained model files
-- Model metadata
-
-### Airflow Dashboard
-
-Open http://localhost:8080 to monitor:
-- DAG execution status
-- Task logs and errors
-- Task duration and performance
-- Inter-task communication (XCom)
-
-## Customization
-
-### Using Different Models
-
-You can use any PyTorch model architecture:
-
-```python
-from torchvision import models
-
-# ResNet family
-model = models.resnet18(num_classes=10)
-model = models.resnet50(num_classes=10)
-
-# EfficientNet
-model = models.efficientnet_b0(num_classes=10)
-
-# Vision Transformer
-model = models.vit_b_16(num_classes=10)
-
-# MobileNet
-model = models.mobilenet_v3_large(num_classes=10)
-
-# The training code remains the same
-trainer = ModelTrainer(model, train_loader, val_loader, ...)
-```
-
-### Custom Loss Functions and Optimizers
-
-```python
-import torch.nn as nn
-import torch.optim as optim
-
-# Custom loss
-criterion = nn.CrossEntropyLoss(weight=class_weights)
-
-# Custom optimizer
-optimizer = optim.SGD(model.parameters(), lr=0.01, momentum=0.9)
-
-# Pass to trainer
-trainer = ModelTrainer(
-    model=model,
-    train_loader=train_loader,
-    val_loader=val_loader,
-    criterion=criterion,
-    optimizer=optimizer,
-    ...
-)
-```
-
-## Common Issues
-
-### Dataset download fails
-
-Some datasets are large and may timeout. Increase the socket timeout:
-
-```python
-import socket
-socket.setdefaulttimeout(600)  # 10 minutes
-```
-
-### Out of memory errors
-
-Reduce the batch size:
-
-```python
-train_loader = DataLoader(dataset, batch_size=16)  # Instead of 32 or 64
-```
-
-### Training is slow
-
-Increase the number of data loading workers:
-
-```python
-train_loader = DataLoader(
-    dataset,
-    batch_size=32,
-    num_workers=8,      # More parallel workers
-    pin_memory=True     # Faster GPU transfer
-)
-```
-
-### MinIO connection fails
-
-Check if MinIO is running:
-
-```bash
-docker ps | grep minio
-docker logs minio
-docker restart minio  # If needed
-```
-
-### MLflow UI not accessible
-
-Check if MLflow server is running:
-
-```bash
-ps aux | grep mlflow
-# Restart if needed
+# MLflow (experiment tracking)
 mlflow server --host 0.0.0.0 --port 5000
+
+# Airflow (orchestration) - see docs for full setup
 ```
 
-## What's Next
+## Requirements
 
-This framework is a starting point. Here are some ideas for extending it:
+Core:
+- Python 3.8+
+- PyTorch 2.0+
+- torchvision 0.15+
 
-- Add Docker Compose for one-command infrastructure setup
-- Implement hyperparameter tuning with Optuna or Ray Tune
-- Add distributed training support
-- Create a model serving API with FastAPI
-- Deploy to Kubernetes
-- Add CI/CD pipeline for automated testing
-- Implement A/B testing framework
-- Add model monitoring and drift detection
-- Support for object detection and segmentation tasks
-- Integrate data versioning with DVC
+Install options:
+```bash
+pip install -e .                    # Core (classification)
+pip install -e ".[detection]"       # + YOLOv8
+pip install -e ".[segmentation]"    # + UNet, DeepLab
+pip install -e ".[full]"            # Everything
+```
+
+## Common Workflows
+
+### 1. New Dataset Evaluation
+
+```bash
+# Analyze first
+cv-pipeline analyze --data ./new_dataset --save report.json
+
+# Quick baseline
+cv-pipeline train --data ./new_dataset --model resnet50 --epochs 5
+
+# Compare architectures
+cv-pipeline compare --models resnet50,efficientnet_b0,mobilenet_v2 --data ./test
+```
+
+### 2. Model Selection
+
+```python
+# Find the best accuracy/size trade-off
+results = compare_models(
+    ["mobilenet_v2", "efficientnet_b0", "resnet50"],
+    test_loader, num_classes=10
+)
+
+# Pick based on your deployment constraints
+# - Mobile: mobilenet_v2 (3.4M params)
+# - Server: efficientnet_b0 (5.3M params)
+# - Best accuracy: resnet50 (25.6M params)
+```
+
+### 3. Production Deployment
+
+```python
+# Train
+model, _ = quick_train("./data", model="efficientnet_b0", epochs=20)
+
+# Export
+export_model(model, "model.pt", format="torchscript")  # PyTorch serving
+export_model(model, "model.onnx", format="onnx")       # Cross-platform
+```
+
+## Documentation
+
+| Document | Description |
+|----------|-------------|
+| [Scenarios Guide](docs/SCENARIOS.md) | Comprehensive use cases for data scientists |
+| [examples/](examples/) | Ready-to-run Python scripts |
+| [templates/](templates/) | Industry-specific solutions |
+| [configs/](configs/) | YAML configuration examples |
 
 ## Contributing
 
-This is an open framework designed to be extensible. Feel free to contribute by:
-- Adding support for new datasets
-- Implementing new model architectures
-- Improving documentation
-- Reporting bugs or suggesting features
+Contributions welcome! Areas of interest:
+- New model architectures
+- Additional business templates
+- Documentation improvements
+- Bug fixes
 
 ## License
 
@@ -563,8 +345,10 @@ MIT License
 
 ## Acknowledgments
 
-This framework builds on:
-- PyTorch and Torchvision for deep learning
-- Apache Airflow for workflow orchestration
-- MLflow for experiment tracking
-- MinIO for object storage
+Built with:
+- [PyTorch](https://pytorch.org/) & [torchvision](https://pytorch.org/vision/)
+- [timm](https://github.com/huggingface/pytorch-image-models) - PyTorch Image Models
+- [ultralytics](https://github.com/ultralytics/ultralytics) - YOLOv8
+- [segmentation-models-pytorch](https://github.com/qubvel/segmentation_models.pytorch)
+- [MLflow](https://mlflow.org/) - Experiment tracking
+- [MinIO](https://min.io/) - Object storage

@@ -1,0 +1,10 @@
+# Classification task configuration
+_base_: ../base.yaml
+
+model:
+  task_type: classification
+
+# Classification-specific defaults
+training:
+  batch_size: 32
+  learning_rate: 0.001

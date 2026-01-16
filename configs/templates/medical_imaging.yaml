@@ -1,0 +1,38 @@
+# Medical Imaging Template Configuration
+# Use cases: Cancer detection, X-ray classification, Skin lesion analysis
+_base_: ../base.yaml
+
+name: medical_imaging_pipeline
+description: "Medical image classification for pathology, radiology, and dermatology"
+
+data:
+  dataset_name: pcam  # Options: pcam, chestxray, isic, custom
+  data_root: ./data/medical
+  image_size: [96, 96]  # PCAM patch size
+  augmentation_level: medium
+  # Medical imaging often uses different normalization
+  # Uncomment to use dataset-specific stats:
+  # normalization_mean: [0.7, 0.5, 0.7]
+  # normalization_std: [0.15, 0.2, 0.15]
+
+model:
+  task_type: classification
+  architecture: resnet50  # Good balance of accuracy and speed
+  num_classes: 2  # Binary: tumor vs normal
+  pretrained: true
+  freeze_backbone: false  # Fine-tune all layers for medical images
+  dropout: 0.3  # Regularization for medical datasets
+
+training:
+  batch_size: 64
+  num_epochs: 30
+  learning_rate: 0.0001  # Lower LR for medical images
+  weight_decay: 0.001
+  optimizer: adamw
+  scheduler: cosine
+  early_stopping_patience: 7
+  mixed_precision: true
+
+infra:
+  mlflow_experiment_name: medical_imaging_experiments
+  minio_bucket: medical-models
